@@ -1,0 +1,46 @@
+<div class="lw_login_wrapper">
+
+	<form action="<?php echo $this->action; ?>" method="POST" autocomplete="off" class="lw_login_form">
+		<?php if ($this->error): ?>
+			<div class="lw_login_error"><span><?php if ($this->lang == "de"):?>Der Login ist fehlerhaft, bitte �berpr�fen Sie die korrekte Eingabe der Logindaten!<?php else: ?>Login Error: please check your Loginname and Password!<?php endif;?></span></div>
+		<?php endif; ?>
+		
+		<div>
+		
+			<div class="lw_login_name_label">
+				<span>Name:</span>
+			</div>
+		
+			<div class="lw_login_name_field">
+				<input type="text" name="lw_login_name" />
+			</div>
+
+		</div>
+
+		<div>
+
+			<div class="lw_login_pass_label">
+				<span><?php if ($this->lang == "de"):?>Passwort:<?php else: ?>Password:<?php endif;?></span>
+			</div>
+
+			<div class="lw_login_pass_field">
+				<input type="password" name="lw_login_pass" />
+			</div>
+
+		</div>
+
+		<div>
+			<input id="lw_login_submit_button" type="submit" value="<?php if ($this->lang == "de"):?>einloggen<?php else: ?>login<?php endif;?>" />
+		</div>
+
+		<?php if ($this->showPWLost):?>
+			<?php if ($this->lang == "de"):?>
+				<a href="<?php echo $this->pwlosturl; ?>">Password vergessen?</a>
+			<?php else: ?>
+				<a href="<?php echo $this->pwlosturl; ?>">Password lost?</a>
+			<?php endif;?> 
+		<?php endif;?>
+
+	</form>
+
+</div>

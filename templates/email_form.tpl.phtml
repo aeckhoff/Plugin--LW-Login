@@ -1,0 +1,74 @@
+<div class="lw_login_wrapper">
+
+	
+		<?php if ($this->noemailerror): ?>
+			<div class="lw_login_error"><span>
+		<?php if ($this->lang == "de"):?>
+			Der eingegebene Wert ist keine g&uuml;ltige E-Mail-Adresse.
+		<?php else: ?>
+			The entered value is no valid e-mail address.
+		<?php endif;?>
+			</span></div>
+		<?php endif; ?>
+	
+		<?php if ($this->response&&!$this->showMessage&&!$this->noemailerror): ?>
+			<div class="lw_login_message"><span>
+		<?php if ($this->lang == "de"):?>
+			Falls Ihre E-Mail-Adresse im System hinterlegt war, wurde Ihnen nun eine E-Mail mit weiteren Informationen zugeschickt.
+		<?php else: ?>
+			If you e-mail address was found in the system, you'll receive an e-mail with further information shortly.
+		<?php endif;?>
+			</span></div>
+		<?php endif; ?>
+		
+		<?php if ($this->response&& $this->error&&$this->showMessage): ?>
+			<div class="lw_login_error"><span>
+		<?php if ($this->lang == "de"):?>
+			Diese E-Mail-Adresse wurde nicht im System gefunden.
+		<?php else: ?>
+			This e-mail address was not found in the system.
+		<?php endif;?>
+			</span></div>
+		<?php endif; ?>
+		
+		<?php if ($this->response&&!$this->error&&$this->showMessage): ?>
+			<div class="lw_login_success"><span>
+		<?php if ($this->lang == "de"):?>
+			Eine E-Mail mit weiteren Informationen wurde an die angegebene Adresse gesendet.
+		<?php else: ?>
+			An e-mail with further information was sent to the given address.
+		<?php endif;?>
+			</span></div>
+		<?php endif; ?>
+		
+		<?php if (!$this->response&&!$this->error): ?>
+		<form action="<?php echo $this->action; ?>" method="POST" autocomplete="on" class="lw_login_form">
+		<input type="hidden" name="email" value="1" />
+		<div id="pwlost_email">
+		
+			<div class="lw_login_name_label">
+				<span>Ihre E-Mail-Adresse:</span>
+			</div>
+		
+			<div class="lw_login_name_field">
+				<input type="text" name="lw_login_email" />
+			</div>
+
+		</div>
+
+
+		<div>
+			<input id="lw_login_submit_button" onClick="document.location.href='<?php echo $this->backurl; ?>';" type="button" value="<?php if ($this->lang == "de"):?>zur&uuml;ck<?php else: ?>back<?php endif;?>" />
+			<input id="lw_login_submit_button" type="submit" value="<?php if ($this->lang == "de"):?>absenden<?php else: ?>send<?php endif;?>" />
+		</div>
+		</form>
+		<?php else: ?>
+			<?php if ($this->lang == "de"):?>
+			<a href="<?php echo $this->backurl; ?>">zur&uuml;ck</a>
+			<?php else: ?>
+			<a href="<?php echo $this->backurl; ?>">back</a>
+			<?php endif;?>
+		<?php endif; ?>
+		
+
+</div>

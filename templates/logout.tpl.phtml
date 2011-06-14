@@ -1,0 +1,15 @@
+<div class="lw_logout_wrapper">
+	
+	<div id="lw_logout_username">
+	
+		<span class="lw_logout_label"><?php if ($this->lang == "de"):?>Benutzer:<?php else: ?>User:<?php endif;?></span>&nbsp;<span class="lw_logout_username"><?php echo $this->username; ?></span>
+	
+	</div>
+	
+	<div id="lw_logout_link">
+	
+		<a href="<?php echo $this->logouturl; ?>" class="lw_logout_link"><span><?php if ($this->lang == "de"):?>ausloggen<?php else: ?>logout<?php endif;?></span></a>
+	
+	</div>
+	
+</div>
