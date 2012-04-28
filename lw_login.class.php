@@ -142,7 +142,7 @@ class lw_login extends lw_plugin {
         if ($view->lang != "en")
             $view->lang = "de";
         $view->showPWLost = ($this->params['pwlost'] == '1') ? true : false;
-        $view->pwlosturl = $this->buildUrl(array("logcmd" => "pwlost"));
+        $view->pwlosturl = lw_page::getInstance()->getUrl(array("logcmd" => "pwlost"));
         return $view->render();        
     }
     
@@ -198,10 +198,10 @@ class lw_login extends lw_plugin {
             $_SESSION['lw_password_lost_email'] = 1;
         }
 
-        $view->action = $this->buildUrl(array("logcmd" => "pwlost"));
+        $view->action = lw_page::getInstance()->getUrl(array("logcmd" => "pwlost"));
         $view->lang = $this->params['lang'];
-        $view->action = $this->buildUrl(array("logcmd" => "pwlost"));
-        $view->backurl = $this->buildUrl(false, "logcmd");
+        $view->action = lw_page::getInstance()->getUrl(array("logcmd" => "pwlost"));
+        $view->backurl = lw_page::getInstance()->getUrl(false, "logcmd");
         if ($this->params['lang'] != "en")
             $view->lang = "de";
         return $view->render();
