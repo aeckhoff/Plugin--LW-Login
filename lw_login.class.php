@@ -3,7 +3,7 @@
 /* * ************************************************************************
  *  Copyright notice
  *
- *  Copyright 2009-2010 Logic Works GmbH
+ *  Copyright 2009-2012 Logic Works GmbH
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -142,11 +142,11 @@ class lw_login extends lw_plugin
             return lw_page::getInstance($this->request->getIndex())->getUrl();
         }
     }
-    
+
     private function _buildLogout() 
     {
         $view = new lw_view($this->basedir . "templates/logout.tpl.phtml");
-        $view->logouturl = lw_url::get(array("logcmd" => "logout"));
+        $view->logouturl = lw_page::getInstance()->getUrl(array("logcmd" => "logout"));
         $view->username = $this->in_auth->getUserdata("name");
         $view->lang = $this->params['lang'];
         if ($view->lang != "en")
@@ -157,7 +157,7 @@ class lw_login extends lw_plugin
     private function _buildLogin() 
     {
         $view = new lw_view($this->basedir . "templates/login.tpl.phtml");
-        $view->action = lw_url::get();
+        $view->action = lw_page::getInstance()->getUrl();
         $view->error = $this->request->getInt('lw_login_error');
         $view->lang = $this->params['lang'];
         if ($view->lang != "en") {
@@ -166,10 +166,10 @@ class lw_login extends lw_plugin
         $view->showPWLost = ($this->params['pwlost'] == '1') ? true : false;
         $view->pwlosturl = lw_page::getInstance()->getUrl(array("logcmd" => "pwlost"));
         return $view->render();        
-    }
+    }    
     
     // Password Lost Functionality
-
+    
     private function sendHashMail($hashData) 
     {
         $hash = $hashData[0];
@@ -190,9 +190,9 @@ class lw_login extends lw_plugin
         else {
             $subject = utf8_decode("Passwort zurücksetzen");
         }
-
-        mail($email, $subject, $msg, 'FROM:passwordlost');
-    }
+        $to = filter_var($this->fPost->getRaw('lw_login_email'), FILTER_SANITIZE_EMAIL);
+        mail($to, $subject, $view->render(), 'FROM:'.$this->config['pwlost']['from']);
+    }    
 
     private function handlePasswordLost() 
     {
@@ -208,7 +208,6 @@ class lw_login extends lw_plugin
             if ($this->fPost->testEmail('lw_login_email')) {
                 $hashData = $this->in_auth->getPasswordHash($this->fPost->getRaw('lw_login_email'));
                 if (!$hashData) {
-
                     $view->error = true;
                 } 
                 else {
@@ -228,12 +227,12 @@ class lw_login extends lw_plugin
         $view->lang = $this->params['lang'];
         $view->action = lw_page::getInstance()->getUrl(array("logcmd" => "pwlost"));
         $view->backurl = lw_page::getInstance()->getUrl(false, "logcmd");
-        if ($this->params['lang'] != "en") {
+        if ($this->params['lang'] != 'en') {
             $view->lang = "de";
         }
         return $view->render();
     }
-
+    
     private function handleResetPassword() 
     {
         $code = $this->fGet->getAlnum('code');
@@ -255,8 +254,8 @@ class lw_login extends lw_plugin
         }
 
         return $this->buildPasswordView();
-    }
-
+    }    
+    
     private function resetPassword() 
     {
         $pass1 = $this->fPost->getRaw('lw_login_pass_1');
@@ -278,8 +277,8 @@ class lw_login extends lw_plugin
 
         $ok = $this->in_auth->resetPassword($code, $uid, $pass1);
         return $ok;
-    }
-
+    }    
+    
     private function buildPasswordView($error = false) 
     {
         $view = new lw_view($this->basedir . "templates/password.tpl.phtml");
@@ -297,12 +296,12 @@ class lw_login extends lw_plugin
         $view->showpassworddialog = true;
         $view->error = $error;
 
-        $view->backurl = lw_url::get();
-        $view->action = lw_url::get(array('logcmd' => 'resetpw', 'code' => $code, 'uid' => $uid));
+        $view->backurl = lw_page::getInstance()->getUrl();
+        $view->action = lw_page::getInstance()->getUrl(array('logcmd' => 'resetpw', 'code' => $code, 'uid' => $uid));
 
         return utf8_decode($view->render());
-    }
-
+    }    
+    
     private function buildSuccessView() 
     {
         $view = new lw_view($this->basedir . "templates/password.tpl.phtml");
@@ -315,12 +314,12 @@ class lw_login extends lw_plugin
         $view->found = false;
         $view->success = true;
         $view->showpassworddialog = false;
-        $view->backurl = lw_url::get();
-        $view->loginurl = lw_url::get();
+        $view->backurl = lw_page::getInstance()->getUrl();
+        $view->loginurl = lw_page::getInstance()->getUrl();
 
         return utf8_decode($view->render());
     }
-
+    
     private function buildNotFoundView() 
     {
         $view = new lw_view($this->basedir . "templates/password.tpl.phtml");
@@ -333,8 +332,8 @@ class lw_login extends lw_plugin
         $view->found = false;
         $view->success = false;
         $view->showpassworddialog = false;
-        $view->backurl = lw_url::get();
+        $view->loginurl = lw_page::getInstance()->getUrl();
 
         return utf8_decode($view->render());
-    }
+    }    
 }
