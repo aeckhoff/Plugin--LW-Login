@@ -19,9 +19,10 @@
  *  
  * ************************************************************************* */
 
-class lw_login extends lw_plugin {
-
-    function __construct($pid=false) {
+class lw_login extends lw_plugin 
+{
+    function __construct($pid=false) 
+    {
         $reg = lw_registry::getInstance();
         $this->config = $reg->getEntry("config");
         $this->request = $reg->getEntry("request");
@@ -32,9 +33,11 @@ class lw_login extends lw_plugin {
 
         if (is_dir($this->config['plugin_path']['lw'])) {
             $this->basedir = $this->config['plugin_path']['lw'] . "lw_login/";
-        } elseif (is_dir($this->config['path']['plugins'])) {
+        } 
+        elseif (is_dir($this->config['path']['plugins'])) {
             $this->basedir = $this->config['path']['plugins'] . "lw_login/";
-        } else {
+        } 
+        else {
             throw new Exception('Plugin Verzeichnis -lw_login- exitiert nicht!');
         }
 
@@ -46,7 +49,8 @@ class lw_login extends lw_plugin {
         }
     }
 
-    public function setParameter($param) {
+    public function setParameter($param) 
+    {
         $parts = explode("&", $param);
         foreach ($parts as $part) {
             $sub = explode("=", $part);
@@ -54,7 +58,8 @@ class lw_login extends lw_plugin {
         }
     }
 
-    function buildPageOutput() {
+    function buildPageOutput() 
+    {
         if ($this->request->getAlnum('logcmd') == 'logout') {
             $this->_logout();
         }
@@ -68,63 +73,78 @@ class lw_login extends lw_plugin {
 
         if (strlen(trim($this->request->getAlnum('lw_login_name'))) > 0 && strlen(trim($this->request->getRaw('lw_login_pass'))) > 0) {
             $this->_login();
-        } else {
+        } 
+        else {
             if ($this->in_auth->isLoggedIn()) {
                 return $this->_buildLogout();
-            } else {
+            } 
+            else {
                 return $this->_buildLogin();
             }
         }
     }
 
-    private function _logout() {
+    private function _logout() 
+    {
         $this->in_auth->logout();
         $url = $this->_getLogoutUrl();
         $this->pageReload($url);
         exit();
     }
     
-    private function _login() {
-        $ok = $this->in_auth->login($this->request->getAlnum('lw_login_name'), $this->request->getRaw('lw_login_pass'));
+    private function _login() 
+    {
+        $ok = $this->in_auth->login($this->request->getRaw('lw_login_name'), $this->request->getRaw('lw_login_pass'));
         if (!$ok) {
             $this->pageReload("index.php?index=" . $this->request->getIndex() . "&lw_login_error=1");
-        } else {
+        } 
+        else {
             $url = $this->_getTargetUrl();
             $this->pageReload($url);
         }
         exit();
     }
     
-    private function _getLogoutUrl() {
+    private function _getLogoutUrl() 
+    {
         if (strlen($this->params['logouturl']) > 0) {
             $url = $this->params['logouturl'];
-        } elseif (intval($this->params['logoutid']) > 0) {
+        } 
+        elseif (intval($this->params['logoutid']) > 0) {
             $url = $this->config['url']['client'] . "index.php?index=" . $this->params['logoutid'];
-        } elseif (strlen($this->params['logoutpagename']) > 0) {
+        } 
+        elseif (strlen($this->params['logoutpagename']) > 0) {
             $url = $this->config['url']['client'] . $this->params['logoutpagename'];
-        } else {
+        } 
+        else {
             $url = $this->config['url']['client'] . "index.php?index=" . $this->request->getIndex();
         }
         return $url;
     }
     
-    private function _getTargetUrl() {
+    private function _getTargetUrl() 
+    {
         if (strlen($this->params['targeturl']) > 0) {
             return $this->params['targeturl'];
-        } elseif (intval($this->params['targetid']) > 0) {
+        } 
+        elseif (intval($this->params['targetid']) > 0) {
             return lw_page::getInstance($this->params['targetid'])->getUrl();
-        } elseif (strlen($this->params['targetpagename']) > 0) {
+        } 
+        elseif (strlen($this->params['targetpagename']) > 0) {
             return $this->config['url']['client'] . $this->params['targetpagename'];
-        } elseif ($this->in_auth->getUserdata("intranet_id") > 0) {
+        } 
+        elseif ($this->in_auth->getUserdata("intranet_id") > 0) {
             $data = $this->repository->getRepository("intranetadmin")->loadData($this->in_auth->getUserdata("intranet_id"));
             $parameter = json_decode($data['parameter'], true);
             return lw_page::getInstance($parameter['targetpage'])->getUrl();
-        } else {
+        } 
+        else {
             return lw_page::getInstance($this->request->getIndex())->getUrl();
         }
     }
     
-    private function _buildLogout() {
+    private function _buildLogout() 
+    {
         $view = new lw_view($this->basedir . "templates/logout.tpl.phtml");
         $view->logouturl = lw_url::get(array("logcmd" => "logout"));
         $view->username = $this->in_auth->getUserdata("name");
@@ -134,13 +154,15 @@ class lw_login extends lw_plugin {
         return $view->render();
     }
     
-    private function _buildLogin() {
+    private function _buildLogin() 
+    {
         $view = new lw_view($this->basedir . "templates/login.tpl.phtml");
         $view->action = lw_url::get();
         $view->error = $this->request->getInt('lw_login_error');
         $view->lang = $this->params['lang'];
-        if ($view->lang != "en")
+        if ($view->lang != "en") {
             $view->lang = "de";
+        }
         $view->showPWLost = ($this->params['pwlost'] == '1') ? true : false;
         $view->pwlosturl = lw_page::getInstance()->getUrl(array("logcmd" => "pwlost"));
         return $view->render();        
@@ -148,7 +170,8 @@ class lw_login extends lw_plugin {
     
     // Password Lost Functionality
 
-    private function sendHashMail($hashData) {
+    private function sendHashMail($hashData) 
+    {
         $hash = $hashData[0];
         $uid = $hashData[1];
 
@@ -163,16 +186,16 @@ class lw_login extends lw_plugin {
 
         if ($this->params['lang'] == "en") {
             $subject = "Restore your password";
-        } else {
+        } 
+        else {
             $subject = utf8_decode("Passwort zurücksetzen");
         }
 
-        //mail($email, $subject, $msg, 'FROM:passwordlost');
-
-        die(utf8_decode($view->render()));
+        mail($email, $subject, $msg, 'FROM:passwordlost');
     }
 
-    private function handlePasswordLost() {
+    private function handlePasswordLost() 
+    {
         $view = new lw_view($this->basedir . "templates/email_form.tpl.phtml");
         $view->noemailerror = false;
         $view->error = false;
@@ -187,14 +210,17 @@ class lw_login extends lw_plugin {
                 if (!$hashData) {
 
                     $view->error = true;
-                } else {
+                } 
+                else {
                     $this->sendHashMail($hashData);
                     $view->error = false;
                 }
-            } else {
+            } 
+            else {
                 $view->noemailerror = true;
             }
-        } else {
+        } 
+        else {
             $_SESSION['lw_password_lost_email'] = 1;
         }
 
@@ -202,31 +228,37 @@ class lw_login extends lw_plugin {
         $view->lang = $this->params['lang'];
         $view->action = lw_page::getInstance()->getUrl(array("logcmd" => "pwlost"));
         $view->backurl = lw_page::getInstance()->getUrl(false, "logcmd");
-        if ($this->params['lang'] != "en")
+        if ($this->params['lang'] != "en") {
             $view->lang = "de";
+        }
         return $view->render();
     }
 
-    private function handleResetPassword() {
+    private function handleResetPassword() 
+    {
         $code = $this->fGet->getAlnum('code');
         $uid = $this->fGet->getInt('uid');
-        if ((strlen($code) < 10) || ($uid < 1))
+        if ((strlen($code) < 10) || ($uid < 1)) {
             return $this->buildNotFoundView();
-        if (!$this->in_auth->checkPasswordHash($code, $uid))
+        }
+        if (!$this->in_auth->checkPasswordHash($code, $uid)) {
             return $this->buildNotFoundView();
+        }
 
         if ($this->fPost->getInt('password') == 1) {
             $ok = $this->resetPassword($code, $uid);
 
-            if ($ok)
+            if ($ok) {
                 return $this->buildSuccessView();
+            }
             return $this->buildPasswordView(true);
         }
 
         return $this->buildPasswordView();
     }
 
-    private function resetPassword() {
+    private function resetPassword() 
+    {
         $pass1 = $this->fPost->getRaw('lw_login_pass_1');
         $pass2 = $this->fPost->getRaw('lw_login_pass_2');
 
@@ -236,22 +268,25 @@ class lw_login extends lw_plugin {
         $pass1 = trim($pass1);
         $pass2 = trim($pass2);
 
-        if ($pass1 != $pass2)
+        if ($pass1 != $pass2) {
             return false;
+        }
 
-        if (strlen($pass1) < 5)
+        if (strlen($pass1) < 5) {
             return false;
+        }
 
         $ok = $this->in_auth->resetPassword($code, $uid, $pass1);
         return $ok;
     }
 
-    private function buildPasswordView($error = false) {
-
+    private function buildPasswordView($error = false) 
+    {
         $view = new lw_view($this->basedir . "templates/password.tpl.phtml");
         $view->lang = $this->params['lang'];
-        if ($this->params['lang'] != 'en')
+        if ($this->params['lang'] != 'en') {
             $view->lang = "de";
+        }
 
         $code = $this->fGet->getAlnum('code');
         $uid = $this->fGet->getAlnum('uid');
@@ -268,11 +303,13 @@ class lw_login extends lw_plugin {
         return utf8_decode($view->render());
     }
 
-    private function buildSuccessView() {
+    private function buildSuccessView() 
+    {
         $view = new lw_view($this->basedir . "templates/password.tpl.phtml");
         $view->lang = $this->params['lang'];
-        if ($this->params['lang'] != 'en')
+        if ($this->params['lang'] != 'en') {
             $view->lang = "de";
+        }
 
         $view->notfound = false;
         $view->found = false;
@@ -284,11 +321,13 @@ class lw_login extends lw_plugin {
         return utf8_decode($view->render());
     }
 
-    private function buildNotFoundView() {
+    private function buildNotFoundView() 
+    {
         $view = new lw_view($this->basedir . "templates/password.tpl.phtml");
         $view->lang = $this->params['lang'];
-        if ($this->params['lang'] != 'en')
+        if ($this->params['lang'] != 'en') {
             $view->lang = "de";
+        }
 
         $view->notfound = true;
         $view->found = false;
