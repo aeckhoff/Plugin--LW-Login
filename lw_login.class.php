@@ -65,10 +65,14 @@ class lw_login extends lw_plugin
         }
 
         if ($this->request->getAlnum('logcmd') == 'pwlost' && $this->params['pwlost'] == '1') {
-            return $this->handlePasswordLost();
+            include_once(dirname(__FILE__).'/lw_password_lost.class.php');
+            $pwlost = new lw_password_lost($this->params);
+            return $pwlost->handlePasswordLost();
         }
         if ($this->request->getAlnum('logcmd') == 'resetpw' && $this->params['pwlost'] == '1') {
-            return $this->handleResetPassword();
+            include_once(dirname(__FILE__).'/lw_password_lost.class.php');
+            $pwlost = new lw_password_lost($this->params);
+            return $pwlost->handleResetPassword();
         }
 
         if (strlen(trim($this->request->getAlnum('lw_login_name'))) > 0 && strlen(trim($this->request->getRaw('lw_login_pass'))) > 0) {
@@ -166,174 +170,5 @@ class lw_login extends lw_plugin
         $view->showPWLost = ($this->params['pwlost'] == '1') ? true : false;
         $view->pwlosturl = lw_page::getInstance()->getUrl(array("logcmd" => "pwlost"));
         return $view->render();        
-    }    
-    
-    // Password Lost Functionality
-    
-    private function sendHashMail($hashData) 
-    {
-        $hash = $hashData[0];
-        $uid = $hashData[1];
-
-        $hashurl = lw_url::get(array('logcmd' => 'resetpw', 'code' => $hash, 'uid' => $uid));
-
-        $view = new lw_view($this->basedir . "templates/email_mail.tpl.phtml");
-        $view->lang = $this->params['lang'];
-        if ($this->params['lang'] != "en")
-            $view->lang = "de";
-
-        $view->hashurl = $hashurl;
-
-        if ($this->params['lang'] == "en") {
-            $subject = "Restore your password";
-        } 
-        else {
-            $subject = utf8_decode("Passwort zurücksetzen");
-        }
-        $to = filter_var($this->fPost->getRaw('lw_login_email'), FILTER_SANITIZE_EMAIL);
-        mail($to, $subject, $view->render(), 'FROM:'.$this->config['pwlost']['from']);
-    }    
-
-    private function handlePasswordLost() 
-    {
-        $view = new lw_view($this->basedir . "templates/email_form.tpl.phtml");
-        $view->noemailerror = false;
-        $view->error = false;
-        $view->showMessage = ($this->params[showmessage] == 1) ? true : false;
-        $view->response = false;
-        if ($this->fPost->getRaw('email') == 1 && $_SESSION['lw_password_lost_email'] == 1) {
-            // Email was send
-            unset($_SESSION['lw_password_lost_email']);
-            $view->response = true;
-            if ($this->fPost->testEmail('lw_login_email')) {
-                $hashData = $this->in_auth->getPasswordHash($this->fPost->getRaw('lw_login_email'));
-                if (!$hashData) {
-                    $view->error = true;
-                } 
-                else {
-                    $this->sendHashMail($hashData);
-                    $view->error = false;
-                }
-            } 
-            else {
-                $view->noemailerror = true;
-            }
-        } 
-        else {
-            $_SESSION['lw_password_lost_email'] = 1;
-        }
-
-        $view->action = lw_page::getInstance()->getUrl(array("logcmd" => "pwlost"));
-        $view->lang = $this->params['lang'];
-        $view->action = lw_page::getInstance()->getUrl(array("logcmd" => "pwlost"));
-        $view->backurl = lw_page::getInstance()->getUrl(false, "logcmd");
-        if ($this->params['lang'] != 'en') {
-            $view->lang = "de";
-        }
-        return $view->render();
-    }
-    
-    private function handleResetPassword() 
-    {
-        $code = $this->fGet->getAlnum('code');
-        $uid = $this->fGet->getInt('uid');
-        if ((strlen($code) < 10) || ($uid < 1)) {
-            return $this->buildNotFoundView();
-        }
-        if (!$this->in_auth->checkPasswordHash($code, $uid)) {
-            return $this->buildNotFoundView();
-        }
-
-        if ($this->fPost->getInt('password') == 1) {
-            $ok = $this->resetPassword($code, $uid);
-
-            if ($ok) {
-                return $this->buildSuccessView();
-            }
-            return $this->buildPasswordView(true);
-        }
-
-        return $this->buildPasswordView();
-    }    
-    
-    private function resetPassword() 
-    {
-        $pass1 = $this->fPost->getRaw('lw_login_pass_1');
-        $pass2 = $this->fPost->getRaw('lw_login_pass_2');
-
-        $code = $this->fGet->getAlnum('code');
-        $uid = $this->fGet->getAlnum('uid');
-
-        $pass1 = trim($pass1);
-        $pass2 = trim($pass2);
-
-        if ($pass1 != $pass2) {
-            return false;
-        }
-
-        if (strlen($pass1) < 5) {
-            return false;
-        }
-
-        $ok = $this->in_auth->resetPassword($code, $uid, $pass1);
-        return $ok;
-    }    
-    
-    private function buildPasswordView($error = false) 
-    {
-        $view = new lw_view($this->basedir . "templates/password.tpl.phtml");
-        $view->lang = $this->params['lang'];
-        if ($this->params['lang'] != 'en') {
-            $view->lang = "de";
-        }
-
-        $code = $this->fGet->getAlnum('code');
-        $uid = $this->fGet->getAlnum('uid');
-
-        $view->notfound = false;
-        $view->found = true;
-        $view->success = false;
-        $view->showpassworddialog = true;
-        $view->error = $error;
-
-        $view->backurl = lw_page::getInstance()->getUrl();
-        $view->action = lw_page::getInstance()->getUrl(array('logcmd' => 'resetpw', 'code' => $code, 'uid' => $uid));
-
-        return utf8_decode($view->render());
-    }    
-    
-    private function buildSuccessView() 
-    {
-        $view = new lw_view($this->basedir . "templates/password.tpl.phtml");
-        $view->lang = $this->params['lang'];
-        if ($this->params['lang'] != 'en') {
-            $view->lang = "de";
-        }
-
-        $view->notfound = false;
-        $view->found = false;
-        $view->success = true;
-        $view->showpassworddialog = false;
-        $view->backurl = lw_page::getInstance()->getUrl();
-        $view->loginurl = lw_page::getInstance()->getUrl();
-
-        return utf8_decode($view->render());
-    }
-    
-    private function buildNotFoundView() 
-    {
-        $view = new lw_view($this->basedir . "templates/password.tpl.phtml");
-        $view->lang = $this->params['lang'];
-        if ($this->params['lang'] != 'en') {
-            $view->lang = "de";
-        }
-
-        $view->notfound = true;
-        $view->found = false;
-        $view->success = false;
-        $view->showpassworddialog = false;
-        $view->loginurl = lw_page::getInstance()->getUrl();
-
-        return utf8_decode($view->render());
     }    
 }
