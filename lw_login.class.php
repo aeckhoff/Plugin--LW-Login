@@ -149,12 +149,16 @@ class lw_login extends lw_plugin
 
     private function _buildLogout() 
     {
+        if ($this->params['redirectifloggedin'] == "1") {
+            $this->pageReload($this->_getTargetUrl());
+        }    
         $view = new lw_view($this->basedir . "templates/logout.tpl.phtml");
         $view->logouturl = lw_page::getInstance()->getUrl(array("logcmd" => "logout"));
         $view->username = $this->in_auth->getUserdata("name");
         $view->lang = $this->params['lang'];
-        if ($view->lang != "en")
+        if ($view->lang != "en") {
             $view->lang = "de";
+        }
         return $view->render();
     }
     
