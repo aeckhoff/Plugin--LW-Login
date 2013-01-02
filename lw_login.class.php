@@ -23,24 +23,17 @@ class lw_login extends lw_plugin
 {
     function __construct($pid=false) 
     {
-        $reg = lw_registry::getInstance();
-        $this->config = $reg->getEntry("config");
-        $this->request = $reg->getEntry("request");
-        $this->repository = $reg->getEntry("repository");
-        $this->in_auth = lw_in_auth::getInstance();
-        $this->fPost = $reg->getEntry("fPost");
-        $this->fGet = $reg->getEntry("fGet");
+        $this->config = lw_registry::getInstance()->getEntry("config");
+        $this->request = lw_registry::getInstance()->getEntry("request");
+        $this->repository = lw_registry::getInstance()->getEntry("repository");
+        $this->fPost = lw_registry::getInstance()->getEntry("fPost");
+        $this->fGet = lw_registry::getInstance()->getEntry("fGet");
 
-        if (is_dir($this->config['plugin_path']['lw'])) {
-            $this->basedir = $this->config['plugin_path']['lw'] . "lw_login/";
-        } 
-        elseif (is_dir($this->config['path']['plugins'])) {
-            $this->basedir = $this->config['path']['plugins'] . "lw_login/";
-        } 
-        else {
-            throw new Exception('Plugin Verzeichnis -lw_login- exitiert nicht!');
-        }
+        $this->handleSecureUrl();
+    }
 
+    public function handleSecureUrl()
+    {
         //check;: https forced on intranet pages
         $httpsPort = (isset($this->config['general']['https_port']) && (is_numeric($this->config['general']['https_port']))) ? $this->config['general']['https_port'] : 443;
         if ($this->config['general']['HTTPSallowed'] && (!isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != "on" && $_SERVER['SERVER_PORT'] != $httpsPort)) {
@@ -60,119 +53,19 @@ class lw_login extends lw_plugin
 
     function buildPageOutput() 
     {
-        if ($this->request->getAlnum('logcmd') == 'logout') {
-            $this->_logout();
-        }
-
-        if ($this->request->getAlnum('logcmd') == 'pwlost' && $this->params['pwlost'] == '1') {
-            include_once(dirname(__FILE__).'/lw_password_lost.class.php');
-            $pwlost = new lw_password_lost($this->params);
-            return $pwlost->handlePasswordLost();
-        }
-        if ($this->request->getAlnum('logcmd') == 'resetpw' && $this->params['pwlost'] == '1') {
-            include_once(dirname(__FILE__).'/lw_password_lost.class.php');
-            $pwlost = new lw_password_lost($this->params);
-            return $pwlost->handleResetPassword();
-        }
-
-        if (strlen(trim($this->request->getAlnum('lw_login_name'))) > 0 && strlen(trim($this->request->getRaw('lw_login_pass'))) > 0) {
-            $this->_login();
-        } 
-        else {
-            if ($this->in_auth->isLoggedIn()) {
-                return $this->_buildLogout();
-            } 
-            else {
-                return $this->_buildLogin();
-            }
-        }
-    }
-
-    private function _logout() 
-    {
-        $this->in_auth->logout();
-        $url = $this->_getLogoutUrl();
-        $this->pageReload($url);
-        exit();
+        $this->loadLoginProcess();
+        return $this->process->execute();
     }
     
-    private function _login() 
+    public function loadLoginProcess()
     {
-        $ok = $this->in_auth->login($this->request->getRaw('lw_login_name'), $this->request->getRaw('lw_login_pass'));
-        if (!$ok) {
-            $this->pageReload("index.php?index=" . $this->request->getIndex() . "&lw_login_error=1");
-        } 
+        $file = dirname(__FILE__).'/classes/lwLoginProcess.php';
+        if (is_file($file)) {
+            include_once($file);
+            $this->process = new lwLoginProcess($this->params, $this->config, $this->request, $this->repository);
+        }
         else {
-            $url = $this->_getTargetUrl();
-            $this->pageReload($url);
+            throw new Exception("The lwLoginProcess Class doesn't exist");
         }
-        exit();
-    }
-    
-    private function _getLogoutUrl() 
-    {
-        if (strlen($this->params['logouturl']) > 0) {
-            $url = $this->params['logouturl'];
-        } 
-        elseif (intval($this->params['logoutid']) > 0) {
-            $url = $this->config['url']['client'] . "index.php?index=" . $this->params['logoutid'];
-        } 
-        elseif (strlen($this->params['logoutpagename']) > 0) {
-            $url = $this->config['url']['client'] . $this->params['logoutpagename'];
-        } 
-        else {
-            $url = $this->config['url']['client'] . "index.php?index=" . $this->request->getIndex();
-        }
-        return $url;
-    }
-    
-    private function _getTargetUrl() 
-    {
-        if (strlen($this->params['targeturl']) > 0) {
-            return $this->params['targeturl'];
-        } 
-        elseif (intval($this->params['targetid']) > 0) {
-            return lw_page::getInstance($this->params['targetid'])->getUrl();
-        } 
-        elseif (strlen($this->params['targetpagename']) > 0) {
-            return $this->config['url']['client'] . $this->params['targetpagename'];
-        } 
-        elseif ($this->in_auth->getUserdata("intranet_id") > 0) {
-            $data = $this->repository->getRepository("intranetadmin")->loadData($this->in_auth->getUserdata("intranet_id"));
-            $parameter = json_decode($data['parameter'], true);
-            return lw_page::getInstance($parameter['targetpage'])->getUrl();
-        } 
-        else {
-            return lw_page::getInstance($this->request->getIndex())->getUrl();
-        }
-    }
-
-    private function _buildLogout() 
-    {
-        if ($this->params['redirectifloggedin'] == "1") {
-            $this->pageReload($this->_getTargetUrl());
-        }    
-        $view = new lw_view($this->basedir . "templates/logout.tpl.phtml");
-        $view->logouturl = lw_page::getInstance()->getUrl(array("logcmd" => "logout"));
-        $view->username = $this->in_auth->getUserdata("name");
-        $view->lang = $this->params['lang'];
-        if ($view->lang != "en") {
-            $view->lang = "de";
-        }
-        return $view->render();
-    }
-    
-    private function _buildLogin() 
-    {
-        $view = new lw_view($this->basedir . "templates/login.tpl.phtml");
-        $view->action = lw_page::getInstance()->getUrl();
-        $view->error = $this->request->getInt('lw_login_error');
-        $view->lang = $this->params['lang'];
-        if ($view->lang != "en") {
-            $view->lang = "de";
-        }
-        $view->showPWLost = ($this->params['pwlost'] == '1') ? true : false;
-        $view->pwlosturl = lw_page::getInstance()->getUrl(array("logcmd" => "pwlost"));
-        return $view->render();        
     }    
 }
