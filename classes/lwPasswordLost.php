@@ -19,16 +19,25 @@
  *  
  * ************************************************************************* */
 
-class lw_password_lost extends lw_object
+class lwPasswordLost extends lw_object
 {
-    function __construct($params) 
+    function __construct($adapter, $params, $config, $request, $basedir) 
     {
+        $this->adapter = $adapter;
         $this->params = $params;
-        $reg = lw_registry::getInstance();
-        $this->fPost = $reg->getEntry("fPost");
-        $this->config = $reg->getEntry("config");
-        $this->in_auth = lw_in_auth::getInstance();
-        $this->fGet = $reg->getEntry("fGet");        
+        $this->config = $config;
+        $this->request = $request;
+        $this->basedir = $basedir;
+    }
+    
+    public function execute($cmd)
+    {
+        if ($cmd == 'pwlost') {
+            return $this->handlePasswordLost();
+        }
+        if ($cmd == 'resetpw') {
+            return $this->handleResetPassword();
+        }    
     }
     
     private function sendHashMail($hashData) 
@@ -36,7 +45,7 @@ class lw_password_lost extends lw_object
         $hash = $hashData[0];
         $uid = $hashData[1];
 
-        $hashurl = lw_url::get(array('logcmd' => 'resetpw', 'code' => $hash, 'uid' => $uid));
+        $hashurl = lw_page::getInstance()->getUrl(array('logcmd' => 'resetpw', 'code' => $hash, 'uid' => $uid));
 
         $view = new lw_view($this->basedir . "templates/email_mail.tpl.phtml");
         $view->lang = $this->params['lang'];
@@ -51,23 +60,23 @@ class lw_password_lost extends lw_object
         else {
             $subject = utf8_decode("Passwort zurücksetzen");
         }
-        $to = filter_var($this->fPost->getRaw('lw_login_email'), FILTER_SANITIZE_EMAIL);
+        $to = filter_var($this->request->getRaw('lw_login_email'), FILTER_SANITIZE_EMAIL);
         mail($to, $subject, $view->render(), 'FROM:'.$this->config['pwlost']['from']);
     }    
 
     public function handlePasswordLost() 
     {
-        $view = new lw_view($this->basedir . "templates/email_form.tpl.phtml");
+        $view = new lw_view($this->basedir."templates/email_form.tpl.phtml");
         $view->noemailerror = false;
         $view->error = false;
-        $view->showMessage = ($this->params[showmessage] == 1) ? true : false;
+        $view->showMessage = ($this->params['showmessage'] == 1) ? true : false;
         $view->response = false;
-        if ($this->fPost->getRaw('email') == 1 && $_SESSION['lw_password_lost_email'] == 1) {
+        if ($this->request->getRaw('email') == 1 && $_SESSION['lw_password_lost_email'] == 1) {
             // Email was send
             unset($_SESSION['lw_password_lost_email']);
             $view->response = true;
-            if ($this->fPost->testEmail('lw_login_email')) {
-                $hashData = $this->in_auth->getPasswordHash($this->fPost->getRaw('lw_login_email'));
+            if ($this->request->testEmail('lw_login_email')) {
+                $hashData = $this->adapter->getPasswordHash($this->request->getRaw('lw_login_email'));
                 if (!$hashData) {
                     $view->error = true;
                 } 
@@ -85,9 +94,8 @@ class lw_password_lost extends lw_object
         }
 
         $view->action = lw_page::getInstance()->getUrl(array("logcmd" => "pwlost"));
-        $view->lang = $this->params['lang'];
-        $view->action = lw_page::getInstance()->getUrl(array("logcmd" => "pwlost"));
         $view->backurl = lw_page::getInstance()->getUrl(false, "logcmd");
+        $view->lang = $this->params['lang'];
         if ($this->params['lang'] != 'en') {
             $view->lang = "de";
         }
@@ -96,16 +104,16 @@ class lw_password_lost extends lw_object
     
     public function handleResetPassword() 
     {
-        $code = $this->fGet->getAlnum('code');
-        $uid = $this->fGet->getInt('uid');
+        $code = $this->request->getAlnum('code');
+        $uid = $this->request->getInt('uid');
         if ((strlen($code) < 10) || ($uid < 1)) {
             return $this->buildNotFoundView();
         }
-        if (!$this->in_auth->checkPasswordHash($code, $uid)) {
+        if (!$this->adapter->checkPasswordHash($code, $uid)) {
             return $this->buildNotFoundView();
         }
 
-        if ($this->fPost->getInt('password') == 1) {
+        if ($this->request->getInt('password') == 1) {
             $ok = $this->resetPassword($code, $uid);
 
             if ($ok) {
@@ -119,11 +127,11 @@ class lw_password_lost extends lw_object
     
     private function resetPassword() 
     {
-        $pass1 = $this->fPost->getRaw('lw_login_pass_1');
-        $pass2 = $this->fPost->getRaw('lw_login_pass_2');
+        $pass1 = $this->request->getRaw('lw_login_pass_1');
+        $pass2 = $this->request->getRaw('lw_login_pass_2');
 
-        $code = $this->fGet->getAlnum('code');
-        $uid = $this->fGet->getAlnum('uid');
+        $code = $this->request->getAlnum('code');
+        $uid = $this->request->getAlnum('uid');
 
         $pass1 = trim($pass1);
         $pass2 = trim($pass2);
@@ -136,20 +144,20 @@ class lw_password_lost extends lw_object
             return false;
         }
 
-        $ok = $this->in_auth->resetPassword($code, $uid, $pass1);
+        $ok = $this->adapter->resetPassword($code, $uid, $pass1);
         return $ok;
     }    
     
     private function buildPasswordView($error = false) 
     {
-        $view = new lw_view($this->basedir . "templates/password.tpl.phtml");
+        $view = new lw_view($this->basedir."templates/password.tpl.phtml");
         $view->lang = $this->params['lang'];
         if ($this->params['lang'] != 'en') {
             $view->lang = "de";
         }
 
-        $code = $this->fGet->getAlnum('code');
-        $uid = $this->fGet->getAlnum('uid');
+        $code = $this->request->getAlnum('code');
+        $uid = $this->request->getAlnum('uid');
 
         $view->notfound = false;
         $view->found = true;
@@ -165,7 +173,7 @@ class lw_password_lost extends lw_object
     
     private function buildSuccessView() 
     {
-        $view = new lw_view($this->basedir . "templates/password.tpl.phtml");
+        $view = new lw_view($this->basedir."templates/password.tpl.phtml");
         $view->lang = $this->params['lang'];
         if ($this->params['lang'] != 'en') {
             $view->lang = "de";
@@ -183,7 +191,7 @@ class lw_password_lost extends lw_object
     
     private function buildNotFoundView() 
     {
-        $view = new lw_view($this->basedir . "templates/password.tpl.phtml");
+        $view = new lw_view($this->basedir."templates/password.tpl.phtml");
         $view->lang = $this->params['lang'];
         if ($this->params['lang'] != 'en') {
             $view->lang = "de";
